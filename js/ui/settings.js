@@ -64,6 +64,10 @@ export async function renderSettings(root, app) {
     toast('Vorschlag eingesetzt – mit „Speichern“ übernehmen.');
   };
 
+  // ---- Rezept-Import ----
+  const proxyUrl = h('input', { type: 'url', value: settings.recipeProxy?.url || '', placeholder: 'leer = öffentlicher Dienst', autocapitalize: 'off' });
+  const proxyKey = h('input', { type: 'text', value: settings.recipeProxy?.key || '', placeholder: 'optional', autocapitalize: 'off' });
+
   const save = async () => {
     const profile = readProfile();
     const macros = {};
@@ -72,7 +76,8 @@ export async function renderSettings(root, app) {
       const max = num(macroInputs[f.key].max);
       if (min != null || max != null) macros[f.key] = { min, max };
     }
-    await app.saveSettings({ profile, macros });
+    const recipeProxy = proxyUrl.value.trim() ? { url: proxyUrl.value.trim(), key: proxyKey.value.trim() || null } : null;
+    await app.saveSettings({ ...settings, profile, macros, recipeProxy });
     toast('Gespeichert');
   };
 
@@ -118,7 +123,7 @@ export async function renderSettings(root, app) {
           const info = backup.inspectBackup(json);
           const range = info.firstDate ? ` (${info.firstDate} bis ${info.lastDate})` : '';
           const ok = await confirmDialog(
-            `Backup vom ${new Date(info.exportedAt).toLocaleString('de-DE')} mit ${info.entries} Einträgen${range} und ${info.foods} eigenen Lebensmitteln einspielen? Alle aktuellen Daten in der App werden dabei ersetzt.`,
+            `Backup vom ${new Date(info.exportedAt).toLocaleString('de-DE')} mit ${info.entries} Einträgen${range}, ${info.foods} eigenen Lebensmitteln und ${info.recipes} Rezepten einspielen? Alle aktuellen Daten in der App werden dabei ersetzt.`,
             'Einspielen'
           );
           if (!ok) return;
@@ -156,7 +161,20 @@ export async function renderSettings(root, app) {
       macroRows,
       h('button', { class: 'link', onclick: fillSuggestion }, 'Vorschlag aus Profil berechnen (DGE)')
     ),
-    h('div', { class: 'pad' }, h('button', { class: 'btn primary wide', onclick: save }, 'Profil & Ziele speichern')),
+    h(
+      'section',
+      { class: 'card' },
+      h('h2', {}, 'Rezept-Import'),
+      h(
+        'p',
+        { class: 'hint' },
+        'Zum Laden von Rezeptseiten braucht die App einen Vermittlungsdienst. Ohne Eintrag wird der kostenlose öffentliche Dienst allorigins.win genutzt (er sieht nur die Rezept-Adresse). ',
+        'Zuverlässiger ist ein eigener Cloudflare Worker – Anleitung im Ordner tools/recipe-proxy des Projekts.'
+      ),
+      h('label', { class: 'field' }, h('span', {}, 'Adresse des eigenen Dienstes'), proxyUrl),
+      h('label', { class: 'field' }, h('span', {}, 'Schlüssel'), proxyKey)
+    ),
+    h('div', { class: 'pad' }, h('button', { class: 'btn primary wide', onclick: save }, 'Einstellungen speichern')),
     h(
       'section',
       { class: 'card' },

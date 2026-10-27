@@ -18,18 +18,23 @@ js/core/                  Rechenlogik ohne Oberfläche
   nutrients.js            Liste aller Nährstoffe, Umrechnen, Summieren
   targets.js              DGE-Referenzwerte, eigene Ziele, Einordnung zu wenig/ok/zu viel
   portions.js             Portionen (1 Stück, 1 EL …) → Gramm
+  ingredients.js          Zutatenzeilen verstehen („2 EL Olivenöl“ → 24 g Olivenöl)
+  recipe-calc.js          Nährwerte pro Rezept/Portion
 js/data/                  Daten
   db.js                   Speicher (IndexedDB) – einzige Stelle mit Speicherzugriff
   repo.js                 Tagebuch, Einstellungen, eigene Lebensmittel, Nutzung
   foods.js                Nährwert-Datenbank: BLS + eigene + Barcode, Suche
   openfoodfacts.js        Barcode-Abfrage bei Open Food Facts
   backup.js               Export/Import als JSON
+  recipes.js              Zutaten automatisch mit Lebensmitteln verknüpfen
+  recipe-import.js        Rezept von Website (schema.org Recipe) oder aus Text
 js/platform/              Alles, was sich zwischen Browser und iOS-App unterscheidet
   scanner.js              Kamera-Barcode-Scanner
   files.js                Datei speichern/öffnen
 js/ui/                    Ansichten (Tagebuch, Nährstoffe, Einstellungen, Eintragen …)
 data/bls.json             Bundeslebensmittelschlüssel, umgewandelt (siehe tools/)
 tools/convert_bls.py      Wandelt die offizielle BLS-Datei in data/bls.json um
+tools/recipe-proxy/       Optionaler eigener Vermittlungsdienst für den Rezept-Import
 vendor/zxing/             Barcode-Erkennung (zxing-wasm, MIT)
 sw.js                     Offline-Speicher (Service Worker)
 ```

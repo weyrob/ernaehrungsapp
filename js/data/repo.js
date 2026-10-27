@@ -143,3 +143,35 @@ export async function saveFood(food) {
 export async function deleteFood(id) {
   await db.remove(db.STORES.foods, id);
 }
+
+// ---------- Rezepte ----------
+
+export async function getRecipes() {
+  return db.getAll(db.STORES.recipes);
+}
+
+export async function getRecipe(id) {
+  return db.get(db.STORES.recipes, id);
+}
+
+export async function saveRecipe(recipe) {
+  const r = { ...recipe, id: recipe.id || `recipe:${uid()}`, createdAt: recipe.createdAt || Date.now(), updatedAt: Date.now() };
+  await db.put(db.STORES.recipes, r);
+  return r;
+}
+
+export async function deleteRecipe(id) {
+  await db.remove(db.STORES.recipes, id);
+}
+
+// ---------- Gemerkte Zutaten-Zuordnungen ----------
+// Wenn du bei einer Zutat das Lebensmittel korrigierst, merkt sich die App das
+// für den nächsten Import ("Zwiebel" → "Zwiebel roh").
+
+export async function getAlias(text) {
+  return (await db.get(db.STORES.aliases, text.toLowerCase().trim()))?.foodId || null;
+}
+
+export async function saveAlias(text, foodId) {
+  await db.put(db.STORES.aliases, { text: text.toLowerCase().trim(), foodId });
+}

@@ -7,11 +7,13 @@
 // und weiß nicht, woher die Daten kommen.
 import * as repo from './repo.js';
 import { fetchProduct } from './openfoodfacts.js';
+import { recipeToFood } from '../core/recipe-calc.js';
 
 export const SOURCES = {
   bls: 'BLS 4.0',
   own: 'Eigenes Lebensmittel',
   off: 'Open Food Facts',
+  recipe: 'Rezept',
 };
 
 let bls = null; // { meta, foods: Map(id → food), list: [...] }
@@ -43,6 +45,13 @@ const SYNONYMS = {
   ei: ['huehnerei'],
   eier: ['huehnerei'],
   haferflocken: ['hafer flocken'],
+  zwiebel: ['speisezwiebel'],
+  zwiebeln: ['speisezwiebel'],
+  salz: ['speisesalz'],
+  zucker: ['zucker weiss'],
+  pfeffer: ['pfeffer schwarz'],
+  mehl: ['weizen mehl'],
+  weizenmehl: ['weizen mehl'],
   muesli: ['muesli'],
   nudel: ['teigwaren'],
   nudeln: ['teigwaren'],
@@ -64,11 +73,30 @@ const SYNONYMS = {
   sahne: ['sahne', 'schlagsahne'],
 };
 
-function tokenScore(f, t) {
+function directScore(f, t) {
   if (f._words[0].startsWith(t)) return 30;
   if (f._words.some((w) => w.startsWith(t))) return 15;
   if (t.length >= 2 && f._words.some((w) => w.endsWith(t))) return 12; // z. B. "ei" in "Hühnerei"
   if (f._search.includes(t)) return 5;
+  return 0;
+}
+
+/** Einfache Grundform: "kartoffeln" → "kartoffel", "tomaten" → "tomat" */
+function stem(t) {
+  if (t.length < 5) return t;
+  return t.replace(/(en|n|s|e)$/, '');
+}
+
+function tokenScore(f, t) {
+  const direct = directScore(f, t);
+  if (direct) return direct;
+  const st = stem(t);
+  if (st !== t) {
+    const s = directScore(f, st);
+    if (s) return s - 2;
+  }
+  // Zusammengesetzte Wörter: "knoblauchzehen" findet "Knoblauch"
+  if (t.length >= 7 && f._words[0].length >= 4 && t.startsWith(f._words[0])) return 10;
   return 0;
 }
 
@@ -102,7 +130,8 @@ export function blsMeta() {
 }
 
 async function storedFoods() {
-  return (await repo.getStoredFoods()).map(prepare);
+  const recipes = (await repo.getRecipes()).map(recipeToFood);
+  return [...(await repo.getStoredFoods()), ...recipes].map(prepare);
 }
 
 /** Holt ein einzelnes Lebensmittel anhand seiner ID ("bls:…", "own:…", "off:…"). */
@@ -110,6 +139,10 @@ export async function getFood(id) {
   if (id.startsWith('bls:')) {
     const b = await loadBLS();
     return b.byId.get(id) || null;
+  }
+  if (id.startsWith('recipe:')) {
+    const r = await repo.getRecipe(id);
+    return r ? prepare(recipeToFood(r)) : null;
   }
   const f = await repo.getStoredFood(id);
   return f ? prepare(f) : null;
@@ -119,12 +152,19 @@ export async function getFood(id) {
  * Sucht Lebensmittel. Alle Suchwörter müssen vorkommen (als Wortanfang oder Teil eines Wortes).
  * Häufig genutzte Lebensmittel und Treffer am Namensanfang stehen oben.
  */
-export async function search(query, { limit = 50, usage = [] } = {}) {
+// Gruppen mit fertigen Gerichten – als Rezept-Zutat fast nie gemeint
+const DISH_GROUPS = new Set(['Gerichte', 'Suppen, Soßen & Fertiggerichte', 'Backwaren & Kekse']);
+
+/**
+ * @param opts.ingredient  Suche für eine Rezept-Zutat: Grundlebensmittel bevorzugen,
+ *                         und nur Treffer, die alle Suchwörter enthalten
+ */
+export async function search(query, { limit = 50, usage = [], includeRecipes = true, ingredient = false } = {}) {
   const q = normalize(query);
   if (!q) return [];
   const tokens = q.split(' ');
   const usageById = new Map(usage.map((u) => [u.foodId, u]));
-  const pools = [await storedFoods()];
+  const pools = [(await storedFoods()).filter((f) => includeRecipes || f.source !== 'recipe')];
   try {
     pools.push((await loadBLS()).list);
   } catch (e) {
@@ -158,6 +198,7 @@ export async function search(query, { limit = 50, usage = [] } = {}) {
         if (/\broh\b/.test(f._search)) score += 3; // "roh" ist meist das, was man sucht
         score -= f._search.length / 10; // kürzere Namen sind meist allgemeiner
         if (f.source !== 'bls') score += 10;
+        if (ingredient && DISH_GROUPS.has(f.group)) score -= 40;
         const u = usageById.get(f.id);
         if (u) score += 40 + Math.min(u.count, 20) * 2;
         out.push({ food: f, score });
@@ -168,7 +209,7 @@ export async function search(query, { limit = 50, usage = [] } = {}) {
 
   let results = collect(true);
   // Nichts gefunden, wenn alle Wörter passen müssen? Dann reicht ein Teil der Wörter.
-  if (!results.length && tokens.length > 1) results = collect(false);
+  if (!results.length && tokens.length > 1 && !ingredient) results = collect(false);
   results.sort((a, b) => b.score - a.score);
   return results.slice(0, limit).map((r) => r.food);
 }
