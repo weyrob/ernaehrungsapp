@@ -6,14 +6,16 @@ import { renderDiary } from './ui/diary.js';
 import { renderTargets } from './ui/targets-view.js';
 import { renderSettings } from './ui/settings.js';
 import { renderRecipes } from './ui/recipes.js';
+import { renderStats } from './ui/stats.js';
 import { openAddFood } from './ui/add-food.js';
 
-export const VERSION = '0.2.0';
+export const VERSION = '0.4.0';
 
 const VIEWS = {
   diary: { title: 'Tagebuch', render: renderDiary },
   recipes: { title: 'Rezepte', render: renderRecipes },
-  targets: { title: 'Nährstoffe', render: renderTargets },
+  stats: { title: 'Statistik', render: renderStats },
+  targets: { title: 'Nährstoffe heute', render: renderTargets },
   settings: { title: 'Einstellungen', render: renderSettings },
 };
 
@@ -44,6 +46,8 @@ const app = {
     this.tab = tab;
     document.querySelectorAll('.tabbar button[data-tab]').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
     document.getElementById('title').textContent = VIEWS[tab].title;
+    // Der Plus-Knopf (Essen eintragen) nur dort, wo er hingehört – sonst verdeckt er Diagramme
+    document.getElementById('fab').hidden = !['diary', 'targets'].includes(tab);
     window.scrollTo(0, 0);
     this.render();
   },
@@ -84,6 +88,14 @@ async function start() {
 
   // Offline-Fähigkeit im Browser. In der iOS-App (Capacitor) liegen die Dateien ohnehin lokal.
   if ('serviceWorker' in navigator && !window.Capacitor && location.protocol === 'https:') {
+    // Wenn eine neue App-Version übernimmt, einmal neu laden, damit alle Dateien zusammenpassen
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || reloaded) return;
+      reloaded = true;
+      location.reload();
+    });
     navigator.serviceWorker.register('sw.js').catch((e) => console.warn('Service Worker:', e));
   }
 }
