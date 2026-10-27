@@ -1,0 +1,5 @@
+{"meta":{"source":"TESTDATEN – wird durch BLS 4.0 ersetzt","count":3},
+ "nutrients":["energy","protein","fat","carbs","fiber","sugar","salt","vitC","calcium","iron","vitB12"],
+ "foods":[["F110100","Apfel roh","Obst",54,0.3,0.1,11.4,2.0,10.3,0.0,12,7,0.2,0],
+          ["C133000","Hafer Flocken","Getreide",348,13.2,6.7,53.3,11,0.7,0.0,0,50,4.6,0],
+          ["M111200","Vollmilch 3,5 % Fett","Milch",65,3.4,3.6,4.8,0,4.8,0.1,1,120,0.05,0.4]]}
