@@ -3,7 +3,7 @@
 // einer neuen Version geschaut; die neue Version gilt dann ab dem nächsten Öffnen.
 // Anfragen an fremde Server (Open Food Facts) gehen immer direkt ins Internet.
 
-const CACHE = 'ernaehrungsapp-v1';
+const CACHE = 'ernaehrungsapp-v2';
 const CORE = [
   './',
   'index.html',
@@ -13,11 +13,15 @@ const CORE = [
   'js/core/nutrients.js',
   'js/core/targets.js',
   'js/core/portions.js',
+  'js/core/ingredients.js',
+  'js/core/recipe-calc.js',
   'js/data/db.js',
   'js/data/repo.js',
   'js/data/foods.js',
   'js/data/backup.js',
   'js/data/openfoodfacts.js',
+  'js/data/recipes.js',
+  'js/data/recipe-import.js',
   'js/platform/scanner.js',
   'js/platform/files.js',
   'js/ui/dom.js',
@@ -27,6 +31,7 @@ const CORE = [
   'js/ui/food-editor.js',
   'js/ui/targets-view.js',
   'js/ui/settings.js',
+  'js/ui/recipes.js',
   'data/bls.json',
   'vendor/zxing/zxing-reader.js',
   'vendor/zxing/zxing_reader.wasm',

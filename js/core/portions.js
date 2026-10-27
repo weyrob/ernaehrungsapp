@@ -33,6 +33,7 @@ const KEYWORD_PORTIONS = [
   ['Karotte', [{ label: '1 Stück', grams: 70 }]],
   ['Möhre', [{ label: '1 Stück', grams: 70 }]],
   ['Zwiebel', [{ label: '1 Stück', grams: 60 }]],
+  ['Speisezwiebel', [{ label: '1 Stück', grams: 60 }]],
   ['Knoblauch', [{ label: '1 Zehe', grams: 4 }]],
   ['Kartoffel', [{ label: '1 Stück (mittel)', grams: 100 }]],
   ['Avocado', [{ label: '1 Stück (ohne Kern)', grams: 140 }]],

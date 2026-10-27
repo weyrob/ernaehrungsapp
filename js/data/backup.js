@@ -3,7 +3,7 @@
 import * as db from './db.js';
 
 export const BACKUP_FORMAT = 'ernaehrungsapp-backup';
-export const BACKUP_VERSION = 1;
+export const BACKUP_VERSION = 2; // 2: + Rezepte, gemerkte Zutaten-Zuordnungen
 
 export async function createBackup() {
   const data = {};
@@ -30,6 +30,7 @@ export function inspectBackup(json) {
   return {
     entries: (d.entries || []).length,
     foods: (d.foods || []).length,
+    recipes: (d.recipes || []).length,
     firstDate: dates[0] || null,
     lastDate: dates[dates.length - 1] || null,
     exportedAt: json.exportedAt,

@@ -3,7 +3,7 @@
 // Wenn wir später in der iOS-App einen anderen Speicher wollen, wird nur diese Datei getauscht.
 
 const DB_NAME = 'ernaehrungsapp';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 // Tabellen ("Object Stores")
 export const STORES = {
@@ -12,6 +12,8 @@ export const STORES = {
   usage: 'usage', // wie oft/zuletzt ein Lebensmittel genutzt wurde
   portions: 'portions', // eigene Portionen je Lebensmittel
   settings: 'settings', // Profil, Ziele usw. (Schlüssel/Wert)
+  recipes: 'recipes', // Rezeptbuch
+  aliases: 'aliases', // gemerkte Zuordnung Zutatenname → Lebensmittel
 };
 
 let dbPromise = null;
@@ -30,6 +32,9 @@ function open() {
       if (!db.objectStoreNames.contains(STORES.usage)) db.createObjectStore(STORES.usage, { keyPath: 'foodId' });
       if (!db.objectStoreNames.contains(STORES.portions)) db.createObjectStore(STORES.portions, { keyPath: 'foodId' });
       if (!db.objectStoreNames.contains(STORES.settings)) db.createObjectStore(STORES.settings, { keyPath: 'key' });
+      // ab Version 2
+      if (!db.objectStoreNames.contains(STORES.recipes)) db.createObjectStore(STORES.recipes, { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(STORES.aliases)) db.createObjectStore(STORES.aliases, { keyPath: 'text' });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);

@@ -5,12 +5,14 @@ import { buildTargets } from './core/targets.js';
 import { renderDiary } from './ui/diary.js';
 import { renderTargets } from './ui/targets-view.js';
 import { renderSettings } from './ui/settings.js';
+import { renderRecipes } from './ui/recipes.js';
 import { openAddFood } from './ui/add-food.js';
 
-export const VERSION = '0.1.0';
+export const VERSION = '0.2.0';
 
 const VIEWS = {
   diary: { title: 'Tagebuch', render: renderDiary },
+  recipes: { title: 'Rezepte', render: renderRecipes },
   targets: { title: 'Nährstoffe', render: renderTargets },
   settings: { title: 'Einstellungen', render: renderSettings },
 };

@@ -10,6 +10,7 @@ import { openFoodEditor } from './food-editor.js';
 function sourceLabel(food) {
   if (food.source === 'bls') return food.group || 'BLS';
   if (food.source === 'off') return food.brand ? `${food.brand} · Barcode` : 'Barcode-Produkt';
+  if (food.source === 'recipe') return 'Rezept';
   return food.brand ? `${food.brand} · eigenes` : 'eigenes Lebensmittel';
 }
 
@@ -138,7 +139,15 @@ export function openAddFood({ date, meal, onChange }) {
       return;
     }
     list.append(h('h3', { class: 'list-head' }, 'Zuletzt & häufig'));
-    for (const u of ranked) list.append(foodRow(u.food, u));
+    for (const u of ranked) {
+      // Rezepte können sich geändert haben → aktuelle Werte holen
+      if (u.foodId.startsWith('recipe:')) {
+        const fresh = await foods.getFood(u.foodId);
+        if (!fresh) continue;
+        u.food = fresh;
+      }
+      list.append(foodRow(u.food, u));
+    }
   }
 
   let searchToken = 0;
