@@ -1,9 +1,13 @@
 // Service Worker: macht die App offline nutzbar.
-// Eigene Dateien werden zwischengespeichert. Beim Start wird im Hintergrund nach
-// einer neuen Version geschaut; die neue Version gilt dann ab dem nächsten Öffnen.
-// Anfragen an fremde Server (Open Food Facts) gehen immer direkt ins Internet.
+//
+// Strategie:
+//   - Programmdateien (HTML, JS, CSS): zuerst aus dem Internet, damit nach einem Update
+//     nie alte und neue Dateien gemischt werden. Ohne Internet aus dem Zwischenspeicher.
+//   - Große, selten geänderte Dateien (Lebensmittel-Datenbank, Scanner, Icons): aus dem
+//     Zwischenspeicher, im Hintergrund aktualisiert.
+//   - Anfragen an fremde Server (Open Food Facts, Rezeptseiten) gehen immer direkt ins Internet.
 
-const CACHE = 'ernaehrungsapp-v2';
+const CACHE = 'ernaehrungsapp-v3';
 const CORE = [
   './',
   'index.html',
@@ -15,6 +19,7 @@ const CORE = [
   'js/core/portions.js',
   'js/core/ingredients.js',
   'js/core/recipe-calc.js',
+  'js/core/stats.js',
   'js/data/db.js',
   'js/data/repo.js',
   'js/data/foods.js',
@@ -32,6 +37,7 @@ const CORE = [
   'js/ui/targets-view.js',
   'js/ui/settings.js',
   'js/ui/recipes.js',
+  'js/ui/stats.js',
   'data/bls.json',
   'vendor/zxing/zxing-reader.js',
   'vendor/zxing/zxing_reader.wasm',
@@ -39,8 +45,16 @@ const CORE = [
   'icons/apple-touch-icon.png',
 ];
 
+const CACHE_FIRST = /\/(data|vendor|icons)\//;
+
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));
+  // "reload" umgeht den HTTP-Cache des Browsers, damit wirklich die neue Version gespeichert wird
+  e.waitUntil(
+    caches
+      .open(CACHE)
+      .then((c) => c.addAll(CORE.map((u) => new Request(u, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (e) => {
@@ -56,17 +70,24 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
 
-  // Aus dem Zwischenspeicher antworten, gleichzeitig im Hintergrund aktualisieren
   e.respondWith(
     caches.open(CACHE).then(async (cache) => {
       const cached = await cache.match(e.request, { ignoreSearch: true });
-      const network = fetch(e.request)
-        .then((res) => {
+      const fromNetwork = () =>
+        fetch(e.request, { cache: 'no-cache' }).then((res) => {
           if (res.ok) cache.put(e.request, res.clone());
           return res;
-        })
-        .catch(() => cached);
-      return cached || network;
+        });
+
+      if (CACHE_FIRST.test(url.pathname)) {
+        const update = fromNetwork().catch(() => cached);
+        return cached || update;
+      }
+      try {
+        return await fromNetwork();
+      } catch {
+        return cached || Response.error();
+      }
     })
   );
 });
