@@ -34,7 +34,42 @@ export function normalize(text) {
 function prepare(food) {
   food._search = normalize(`${food.name} ${food.brand || ''}`);
   food._words = food._search.split(' ');
+  food._compact = food._search.replace(/ /g, '');
   return food;
+}
+
+// Alltagswörter → Begriffe, wie sie im BLS stehen
+const SYNONYMS = {
+  ei: ['huehnerei'],
+  eier: ['huehnerei'],
+  haferflocken: ['hafer flocken'],
+  muesli: ['muesli'],
+  nudel: ['teigwaren'],
+  nudeln: ['teigwaren'],
+  pasta: ['teigwaren'],
+  spaghetti: ['teigwaren'],
+  quark: ['speisequark'],
+  hackfleisch: ['hackfleisch', 'hack'],
+  haehnchenbrust: ['haehnchen brust'],
+  putenbrust: ['pute brust'],
+  semmel: ['broetchen'],
+  wecken: ['broetchen'],
+  kartoffeln: ['kartoffel'],
+  karotte: ['karotte', 'moehre'],
+  moehre: ['moehre', 'karotte'],
+  erdapfel: ['kartoffel'],
+  paradeiser: ['tomate'],
+  topfen: ['speisequark'],
+  obers: ['schlagsahne'],
+  sahne: ['sahne', 'schlagsahne'],
+};
+
+function tokenScore(f, t) {
+  if (f._words[0].startsWith(t)) return 30;
+  if (f._words.some((w) => w.startsWith(t))) return 15;
+  if (t.length >= 2 && f._words.some((w) => w.endsWith(t))) return 12; // z. B. "ei" in "Hühnerei"
+  if (f._search.includes(t)) return 5;
+  return 0;
 }
 
 /** Lädt die BLS-Daten (einmalig, ca. 1–2 MB; danach aus dem Offline-Speicher). */
@@ -96,30 +131,44 @@ export async function search(query, { limit = 50, usage = [] } = {}) {
     console.warn(e);
   }
 
-  const results = [];
-  for (const pool of pools) {
-    for (const f of pool) {
-      let score = 0;
-      let ok = true;
-      for (const t of tokens) {
-        if (f._words[0].startsWith(t)) score += 30;
-        else if (f._words.some((w) => w.startsWith(t))) score += 15;
-        else if (f._search.includes(t)) score += 5;
-        else {
-          ok = false;
-          break;
-        }
-      }
-      if (!ok) continue;
-      if (f._words[0] === tokens[0]) score += 20;
-      if (/\broh\b/.test(f._search)) score += 3; // "roh" ist meist das, was man sucht
-      score -= f._search.length / 10; // kürzere Namen sind meist allgemeiner
-      if (f.source !== 'bls') score += 10;
-      const u = usageById.get(f.id);
-      if (u) score += 40 + Math.min(u.count, 20) * 2;
-      results.push({ food: f, score });
+  const qCompact = q.replace(/ /g, '');
+  const scoreFood = (f, requireAll) => {
+    let score = 0;
+    let matched = 0;
+    for (const t of tokens) {
+      let best = tokenScore(f, t);
+      for (const syn of SYNONYMS[t] || []) best = Math.max(best, syn.split(' ').every((x) => f._words.some((w) => w.startsWith(x))) ? 60 : 0);
+      if (best) matched += 1;
+      else if (requireAll) return null;
+      score += best;
     }
-  }
+    if (!matched) return null;
+    if (f._words[0] === tokens[0]) score += 20;
+    return score;
+  };
+
+  const collect = (requireAll) => {
+    const out = [];
+    for (const pool of pools) {
+      for (const f of pool) {
+        let score = scoreFood(f, requireAll);
+        // "haferflocken" findet auch "Hafer Flocken"
+        if (score == null && qCompact.length >= 4 && f._compact.includes(qCompact)) score = f._compact.startsWith(qCompact) ? 45 : 25;
+        if (score == null) continue;
+        if (/\broh\b/.test(f._search)) score += 3; // "roh" ist meist das, was man sucht
+        score -= f._search.length / 10; // kürzere Namen sind meist allgemeiner
+        if (f.source !== 'bls') score += 10;
+        const u = usageById.get(f.id);
+        if (u) score += 40 + Math.min(u.count, 20) * 2;
+        out.push({ food: f, score });
+      }
+    }
+    return out;
+  };
+
+  let results = collect(true);
+  // Nichts gefunden, wenn alle Wörter passen müssen? Dann reicht ein Teil der Wörter.
+  if (!results.length && tokens.length > 1) results = collect(false);
   results.sort((a, b) => b.score - a.score);
   return results.slice(0, limit).map((r) => r.food);
 }

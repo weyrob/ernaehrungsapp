@@ -10,9 +10,10 @@ import { evaluate, STATUS_LABEL } from '../core/targets.js';
  * @param missing  Anzahl Einträge ohne Wert für diesen Nährstoff
  * @param compact  kleine Darstellung (für die Übersicht im Tagebuch)
  */
-export function nutrientBar({ key, value, target, missing = 0, compact = false, label }) {
+export function nutrientBar({ key, value, target, missing = 0, compact = false, label, noData = false }) {
   const n = NUTRIENT_BY_KEY[key];
-  const { status } = evaluate(value, target);
+  // noData: kein einziger Eintrag hat einen Wert → keine Bewertung möglich
+  const status = noData ? 'none' : evaluate(value, target).status;
   const min = target?.min ?? null;
   const upper = target?.max ?? target?.ul ?? null;
 
@@ -48,11 +49,12 @@ export function nutrientBar({ key, value, target, missing = 0, compact = false, 
         { class: 'nbar-value' },
         `${formatNumber(value, n.decimals)}${refText ? ` / ${refText}` : ''} ${n.unit}`
       ),
-      target && h('span', { class: `pill s-${status}` }, STATUS_LABEL[status])
+      noData ? h('span', { class: 'pill s-nodata' }, 'keine Daten') : target && h('span', { class: `pill s-${status}` }, STATUS_LABEL[status])
     ),
-    track,
+    target ? track : null,
     missing > 0 &&
       !compact &&
+      !noData &&
       h('div', { class: 'nbar-note' }, `${missing} ${missing === 1 ? 'Eintrag' : 'Einträge'} ohne Angabe – Wert evtl. höher`)
   );
 }

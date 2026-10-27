@@ -12,8 +12,10 @@ export async function renderTargets(root, app) {
   const { total, missing } = dayTotals(entries);
   const t = app.targets;
 
+  const noData = (key) => entries.length > 0 && missing[key] === entries.length;
   const counts = { low: 0, ok: 0, high: 0 };
   for (const n of NUTRIENTS) {
+    if (noData(n.key)) continue;
     const s = evaluate(total[n.key], t[n.key]).status;
     if (s in counts) counts[s] += 1;
   }
@@ -51,7 +53,7 @@ export async function renderTargets(root, app) {
       { class: 'card' },
       h('h2', {}, g.label),
       NUTRIENTS.filter((n) => n.group === g.id).map((n) => {
-        const bar = nutrientBar({ key: n.key, value: total[n.key], target: t[n.key], missing: entries.length ? missing[n.key] : 0 });
+        const bar = nutrientBar({ key: n.key, value: total[n.key], target: t[n.key], missing: entries.length ? missing[n.key] : 0, noData: noData(n.key) });
         if (t[n.key]?.source) {
           const src = h('div', { class: 'nbar-source', hidden: true }, `Sollwert: ${t[n.key].source}`);
           bar.append(src);

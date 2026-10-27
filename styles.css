@@ -138,6 +138,7 @@ a { color: var(--accent); }
 .pill.s-ok { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
 .pill.s-high { background: var(--zone-high); color: var(--high); }
 .pill.s-none { display: none; }
+.pill.s-nodata { background: var(--track); color: var(--muted); }
 .status-counts { display: flex; gap: 8px; flex-wrap: wrap; }
 .status-counts .pill { font-size: 13px; padding: 3px 10px; }
 .summary .link { margin-top: 6px; }
